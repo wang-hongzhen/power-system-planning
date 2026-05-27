@@ -20,9 +20,10 @@ def print_summary(results, net):
                   11: "INTERRUPTED", 12: "NUMERIC", 13: "SUBOPTIMAL"}
     status_str = status_map.get(results["status"], f"CODE_{results['status']}")
     print(f"  Solve status:     {status_str}")
-    if results["obj_val"] is not None:
+    if results.get("obj_val") is not None:
         print(f"  Total annual cost: ${results['obj_val']:,.2f}")
-    print(f"  MIP gap:           {results['mip_gap']:.4%}")
+    if results.get("mip_gap") is not None:
+        print(f"  MIP gap:           {results['mip_gap']:.4%}")
     print(f"  Solve time:        {results['solve_time']:.1f} s")
 
     # Battery
@@ -288,6 +289,8 @@ def export_results(results, net, output_dir="results"):
         "hydrogen": results["hydrogen"],
         "cost_breakdown": results["cost_breakdown"],
     }
+    if "dro_info" in results:
+        json_data["dro_info"] = results["dro_info"]
     with open(os.path.join(output_dir, "placement.json"), "w") as f:
         json.dump(json_data, f, indent=2)
 

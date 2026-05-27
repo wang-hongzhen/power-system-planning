@@ -49,9 +49,9 @@ P_H2_MIN = 0.005         # p.u. min H2 component power (50 kW)
 N_MAX_BAT = 5
 N_MAX_H2 = 5
 
-# Voltage limits (squared)
-V_MIN_SQ = 0.95 ** 2
-V_MAX_SQ = 1.05 ** 2
+# Voltage limits (squared) — matched to MATPOWER IEEE 33-bus defaults
+V_MIN_SQ = 0.90 ** 2
+V_MAX_SQ = 1.10 ** 2
 
 # Minimum energy-to-power ratio (hours) - ensures storage is real
 MIN_DURATION_BAT = 2.0   # Battery: at least 2-hour duration
@@ -470,6 +470,25 @@ def build_and_solve(net, scenarios, time_limit=3600, mip_gap=0.01, verbose=True)
         print("Solving...")
 
     m.optimize()
+
+    # Handle infeasibility gracefully
+    if m.Status == GRB.INFEASIBLE:
+        if verbose:
+            print("Model is INFEASIBLE — computing IIS for diagnostics...")
+            m.computeIIS()
+            iis_file = "results/model_iis.ilp"
+            m.write(iis_file)
+            print(f"  IIS written to {iis_file}")
+        return m, {
+            "status": m.Status,
+            "obj_val": None,
+            "mip_gap": None,
+            "solve_time": m.Runtime,
+            "battery": {},
+            "hydrogen": {},
+            "cost_breakdown": {},
+            "operation": {},
+        }
 
     # ========== Extract results ==========
     results = _extract_results(m, net, y_bat, y_h2, E_bat, P_bat, P_elz, P_fc,
